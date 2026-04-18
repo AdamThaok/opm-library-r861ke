@@ -1,0 +1,38 @@
+{
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deployments": [
+    {
+      "name": "backend",
+      "repo": ".",
+      "rootDirectory": "backend",
+      "buildCommand": "pip install -r requirements.txt",
+      "startCommand": "/app/scripts/wait-for-db.sh uvicorn app.main:app --host 0.0.0.0 --port $PORT",
+      "environment": {
+        "PORT": "8000",
+        "DATABASE_URL": "${{PostgreSQL.DATABASE_URL}}",
+        "FRONTEND_ORIGIN": "${{frontend.URL}}",
+        "DB_HOST": "${{PostgreSQL.HOST}}",
+        "DB_PORT": "${{PostgreSQL.PORT}}"
+      }
+    },
+    {
+      "name": "frontend",
+      "repo": ".",
+      "rootDirectory": "frontend",
+      "buildCommand": "npm install && npm run build",
+      "startCommand": "nginx -g 'daemon off;'",
+      "environment": {
+        "PORT": "3000",
+        "VITE_API_BASE_URL": "${{backend.URL}}"
+      }
+    }
+  ],
+  "plugins": [
+    {
+      "name": "PostgreSQL",
+      "type": "postgresql"
+    }
+  ]
+}

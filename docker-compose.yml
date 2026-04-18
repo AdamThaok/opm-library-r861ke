@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: dbname
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://user:password@db:5432/dbname
+      FRONTEND_ORIGIN: http://localhost:3000
+      PORT: 8000
+      DB_HOST: db
+      DB_PORT: 5432
+    depends_on:
+      - db
+    # Use the wait-for-db.sh script to ensure DB is ready before starting FastAPI
+    command: /app/scripts/wait-for-db.sh uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8000
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      VITE_API_BASE_URL: http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  db_data:
